@@ -76,7 +76,7 @@
                 </a>
               </span>
               <span class="link-block">
-                <a href="#"
+                <a href="https://github.com/jiezhu23/FusionAgent_CVPR26"
                    class="external-link button is-normal is-rounded is-dark">
                   <span class="icon"><i class="fab fa-github"></i></span>
                   <span>Code</span>
@@ -131,7 +131,10 @@
             Existing whole-body human recognition systems usually fuse face, gait, and body models with a fixed strategy for all samples. This static design is inefficient and can hurt accuracy when some modalities are unreliable (e.g., missing face cues in back-view videos).
           </p>
           <p>
-            We propose <strong>FusionAgent</strong>, an MLLM-based framework that dynamically selects model subsets per sample and fuses their outputs with <strong>Anchor-based Confidence Top-k (ACT)</strong> score fusion. Trained with reinforcement fine-tuning and a metric-aware reward, FusionAgent delivers more robust and explainable decisions, and consistently outperforms strong baselines on CCVID, LTCC, and MEVID.
+            We propose <strong>FusionAgent</strong>, an MLLM-based framework that dynamically selects model subsets per sample and fuses their outputs with <strong>Anchor-based Confidence Top-k (ACT)</strong> score fusion. Trained with reinforcement fine-tuning under Group Relative Policy Optimization (GRPO) and a metric-based reward, FusionAgent learns explainable, sample-specific model selection without requiring ground-truth reasoning traces or exhaustive search over model combinations.
+          </p>
+          <p>
+            Across CCVID, LTCC, and MEVID, FusionAgent consistently improves open-set search and verification performance, while also providing a practical trade-off between interpretability and speed through <strong>Chain-of-Thought (CoT)</strong> and <strong>Direct Answering (DA)</strong> inference modes.
           </p>
         </div>
       </div>
@@ -153,7 +156,7 @@
             FusionAgent addresses this by leveraging an MLLM agent to <strong>dynamically select a subset of models</strong> per sample, followed by adaptive score fusion, enabling robust integration tailored to each input.
           </p>
         </div>
-        <figure class="image">
+        <figure class="image figure-scaled-80">
           <img src="./static/images/figures/motivation.png" alt="Comparison of score-fusion methods: rule-based vs. learning-based vs. FusionAgent" style="border-radius: 8px;">
           <figcaption class="fig-caption">
             <strong>Comparison of score-fusion methods.</strong> Top: Rule-based methods apply predefined transformations to fuse all model scores, while learning-based methods infer a fusion model from data but still assume every model contributes to all test samples. Bottom: FusionAgent leverages an MLLM agent to dynamically select a subset of models, followed by the proposed score-fusion strategy.
@@ -174,8 +177,11 @@
           <p>
             The FusionAgent framework consists of two core components: (1) an <strong>MLLM-based agent</strong> that performs multi-turn reasoning and dynamic model selection using a ReAct-style controller, and (2) the <strong>ACT score-fusion</strong> algorithm that robustly integrates outputs from the selected models. The agent is trained via Group Relative Policy Optimization (GRPO) with four reward functions: format reward, tool success reward, answer accuracy reward, and a novel <em>metric-based reward</em>.
           </p>
+          <p>
+            For each query, the agent first analyzes the biometric evidence and selects an initial model. Each tool returns both a predicted identity and an internal score vector over the gallery; the score vector is retained for fusion, while the predicted identity is exposed to the agent for subsequent reasoning. The agent can then continue invoking tools or terminate with a final answer and reasoning summary, yielding transparent, traceable decisions.
+          </p>
         </div>
-        <figure class="image">
+        <figure class="image figure-scaled-88">
           <img src="./static/images/figures/overview.png" alt="Overview of the FusionAgent framework" style="border-radius: 8px;">
           <figcaption class="fig-caption">
             <strong>Overview of the FusionAgent framework.</strong> Recognition models are wrapped as tools to generate score vectors and predicted identities. The MLLM agent receives multimodal biometric inputs, performs reasoning-action steps through multi-turn dialogue, selectively invokes tools, and integrates predictions into a final identity decision and fused score vector. The agent is optimized with reinforcement fine-tuning using rule-based rewards, including the proposed metric-based reward.
@@ -195,6 +201,9 @@
         <div class="content has-text-justified" style="margin-bottom: 1.5rem;">
           <p>
             ACT dynamically combines scores from multiple models by leveraging a stable <strong>anchor model</strong> (the first model selected by the agent) to provide a robust score vector, while selectively incorporating normalized, high-confidence scores from complementary models. The anchor model provides a global ranking structure, while selected models offer sparse, localized refinements only for their top-k predictions.
+          </p>
+          <p>
+            This design reduces the misalignment introduced by heterogeneous embeddings and sample-wise model selection. In practice, ACT is especially effective for difficult verification and open-set search settings, where suppressing noisy non-match scores is as important as improving the top match.
           </p>
         </div>
         <figure class="image">
@@ -218,6 +227,9 @@
           <p>
             FusionAgent is evaluated on three challenging whole-body biometric benchmarks: CCVID, LTCC, and MEVID. The results consistently demonstrate superior performance across all metrics, especially in verification (TAR@FAR) and open-set search (FNIR@FPIR).
           </p>
+          <p>
+            Compared with statistical fusion baselines and the quality-aware fusion method QME, FusionAgent achieves the most consistent gains in FNIR, showing that adaptive model selection is particularly beneficial for robust open-set retrieval. The paper also reports that DA substantially reduces latency relative to CoT, while CoT provides more interpretable reasoning, and that the agent transfers well to cross-domain LTCC evaluation with zero-shot and 10-shot adaptation.
+          </p>
         </div>
       </div>
     </div>
@@ -240,12 +252,21 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td>AdaFace (FR)</td><td>94.0</td><td>87.9</td><td>75.7</td><td>13.0</td></tr>
-                  <tr><td>CAL (ReID)</td><td>81.4</td><td>74.7</td><td>66.3</td><td>52.8</td></tr>
-                  <tr><td>BigGait (Gait)</td><td>76.7</td><td>61.0</td><td>49.7</td><td>71.1</td></tr>
-                  <tr class="table-divider"><td>Z-score</td><td>92.2</td><td>90.6</td><td>73.9</td><td>15.1</td></tr>
-                  <tr><td>QME (ICCV'25)</td><td>94.1</td><td>90.8</td><td>76.2</td><td>12.3</td></tr>
-                  <tr class="is-best"><td><strong>FusionAgent (Ours)</strong></td><td><strong>93.4</strong></td><td><strong>92.6</strong></td><td><strong>85.9</strong></td><td><strong>10.1</strong></td></tr>
+                  <tr><td>AdaFace</td><td>94.0</td><td>87.9</td><td>75.7</td><td>13.0 &plusmn; 3.5</td></tr>
+                  <tr><td>CAL</td><td>81.4</td><td>74.7</td><td>66.3</td><td>52.8 &plusmn; 13.3</td></tr>
+                  <tr><td>BigGait</td><td>76.7</td><td>61.0</td><td>49.7</td><td>71.1 &plusmn; 6.1</td></tr>
+                  <tr><td>SapiensID</td><td>92.6</td><td>77.8</td><td>-</td><td>-</td></tr>
+                  <tr class="table-divider"><td>Min-Fusion</td><td>87.1</td><td>79.2</td><td>62.4</td><td>48.5 &plusmn; 8.7</td></tr>
+                  <tr><td>Max-Fusion</td><td>89.9</td><td>89.3</td><td>73.4</td><td>23.0 &plusmn; 10.1</td></tr>
+                  <tr><td>Z-score</td><td>92.2</td><td>90.6</td><td>73.9</td><td>15.1 &plusmn; 1.5</td></tr>
+                  <tr><td>Min-max</td><td>91.8</td><td>90.9</td><td>73.9</td><td>15.4 &plusmn; 2.5</td></tr>
+                  <tr><td>Weighted-sum</td><td>91.7</td><td>90.6</td><td>73.6</td><td>15.4 &plusmn; 1.8</td></tr>
+                  <tr><td>Asym-AO1</td><td>92.3</td><td>90.0</td><td>74.0</td><td>15.9 &plusmn; 1.7</td></tr>
+                  <tr><td>BSSF</td><td>91.8</td><td>91.1</td><td>73.9</td><td>14.1 &plusmn; 1.3</td></tr>
+                  <tr><td>Farsight</td><td>92.0</td><td>91.2</td><td>73.9</td><td>13.9 &plusmn; 1.1</td></tr>
+                  <tr><td>QME</td><td>94.1</td><td>90.8</td><td>76.2</td><td>12.3 &plusmn; 1.4</td></tr>
+                  <tr><td>FusionAgent (DA)</td><td>92.8</td><td>92.2</td><td>85.8</td><td>10.5 &plusmn; 1.5</td></tr>
+                  <tr class="is-best"><td><strong>FusionAgent (CoT)</strong></td><td><strong>93.4</strong></td><td><strong>92.6</strong></td><td><strong>85.9</strong></td><td><strong>10.1 &plusmn; 1.5</strong></td></tr>
                 </tbody>
               </table>
             </div>
@@ -260,14 +281,26 @@
                     <th>Method</th>
                     <th>Rank-1 &uarr;</th>
                     <th>mAP &uarr;</th>
-                    <th>TAR &uarr;</th>
-                    <th>FNIR &darr;</th>
+                    <th>TAR@1%FAR &uarr;</th>
+                    <th>FNIR@1%FPIR &darr;</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td>CAL</td><td>74.4</td><td>40.6</td><td>36.7</td><td>59.7</td></tr>
-                  <tr><td>QME</td><td>73.8</td><td>39.6</td><td>35.0</td><td>64.3</td></tr>
-                  <tr class="is-best"><td><strong>Ours</strong></td><td><strong>75.5</strong></td><td><strong>41.0</strong></td><td><strong>37.0</strong></td><td><strong>50.0</strong></td></tr>
+                  <tr><td>AdaFace</td><td>18.5</td><td>5.9</td><td>2.4</td><td>99.8 &plusmn; 0.2</td></tr>
+                  <tr><td>CAL</td><td>74.4</td><td>40.6</td><td>36.7</td><td>59.7 &plusmn; 7.3</td></tr>
+                  <tr><td>AIM</td><td>74.8</td><td>40.9</td><td>37.0</td><td>66.2 &plusmn; 7.5</td></tr>
+                  <tr><td>SapiensID</td><td>72.0</td><td>34.6</td><td>-</td><td>-</td></tr>
+                  <tr class="table-divider"><td>Min-Fusion</td><td>38.1</td><td>13.5</td><td>12.4</td><td>81.9 &plusmn; 6.0</td></tr>
+                  <tr><td>Max-Fusion</td><td>62.5</td><td>33.3</td><td>16.8</td><td>94.8 &plusmn; 4.7</td></tr>
+                  <tr><td>Z-score</td><td>73.0</td><td>37.5</td><td>30.4</td><td>68.7 &plusmn; 9.2</td></tr>
+                  <tr><td>Min-max</td><td>73.2</td><td>38.1</td><td>31.9</td><td>75.1 &plusmn; 9.2</td></tr>
+                  <tr><td>Weighted-sum</td><td>73.2</td><td>37.8</td><td>31.3</td><td>72.4 &plusmn; 8.6</td></tr>
+                  <tr><td>Asym-AO1</td><td>71.2</td><td>32.9</td><td>19.1</td><td>76.3 &plusmn; 8.9</td></tr>
+                  <tr><td>BSSF</td><td>73.5</td><td>39.1</td><td>34.2</td><td>68.9 &plusmn; 8.5</td></tr>
+                  <tr><td>Farsight</td><td>73.2</td><td>37.8</td><td>31.3</td><td>72.4 &plusmn; 8.6</td></tr>
+                  <tr><td>QME</td><td>73.8</td><td>39.6</td><td>35.0</td><td>64.3 &plusmn; 8.0</td></tr>
+                  <tr><td>FusionAgent (DA)</td><td>75.5</td><td>41.0</td><td>36.5</td><td>50.3 &plusmn; 9.0</td></tr>
+                  <tr class="is-best"><td><strong>FusionAgent (CoT)</strong></td><td><strong>75.5</strong></td><td><strong>41.0</strong></td><td><strong>37.0</strong></td><td><strong>50.0 &plusmn; 8.5</strong></td></tr>
                 </tbody>
               </table>
             </div>
@@ -282,14 +315,25 @@
                     <th>Method</th>
                     <th>Rank-1 &uarr;</th>
                     <th>mAP &uarr;</th>
-                    <th>TAR &uarr;</th>
-                    <th>FNIR &darr;</th>
+                    <th>TAR@1%FAR &uarr;</th>
+                    <th>FNIR@1%FPIR &darr;</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td>CAL</td><td>52.5</td><td>27.1</td><td>34.7</td><td>67.8</td></tr>
-                  <tr><td>QME</td><td>55.7</td><td>28.2</td><td>32.9</td><td>64.6</td></tr>
-                  <tr class="is-best"><td><strong>Ours</strong></td><td><strong>54.7</strong></td><td><strong>28.7</strong></td><td><strong>34.9</strong></td><td><strong>58.6</strong></td></tr>
+                  <tr><td>AdaFace</td><td>25.0</td><td>8.1</td><td>5.4</td><td>98.8 &plusmn; 1.2</td></tr>
+                  <tr><td>CAL</td><td>52.5</td><td>27.1</td><td>34.7</td><td>67.8 &plusmn; 7.3</td></tr>
+                  <tr><td>AGRL</td><td>51.9</td><td>25.5</td><td>30.7</td><td>69.4 &plusmn; 8.9</td></tr>
+                  <tr class="table-divider"><td>Min-Fusion</td><td>46.8</td><td>21.2</td><td>28.0</td><td>70.4 &plusmn; 8.0</td></tr>
+                  <tr><td>Max-Fusion</td><td>33.2</td><td>14.9</td><td>8.3</td><td>97.4 &plusmn; 1.6</td></tr>
+                  <tr><td>Z-score</td><td>54.1</td><td>27.4</td><td>30.7</td><td>66.5 &plusmn; 7.0</td></tr>
+                  <tr><td>Min-max</td><td>52.8</td><td>24.7</td><td>25.0</td><td>71.3 &plusmn; 6.1</td></tr>
+                  <tr><td>Weighted-sum</td><td>54.1</td><td>27.3</td><td>30.3</td><td>66.3 &plusmn; 7.0</td></tr>
+                  <tr><td>Asym-AO1</td><td>52.5</td><td>22.9</td><td>23.6</td><td>71.7 &plusmn; 5.8</td></tr>
+                  <tr><td>BSSF</td><td>53.5</td><td>27.4</td><td>30.5</td><td>65.9 &plusmn; 7.2</td></tr>
+                  <tr><td>Farsight</td><td>53.8</td><td>25.4</td><td>26.6</td><td>69.8 &plusmn; 6.4</td></tr>
+                  <tr><td>QME</td><td>55.7</td><td>28.2</td><td>32.9</td><td>64.6 &plusmn; 8.2</td></tr>
+                  <tr><td>FusionAgent (DA)</td><td>52.5</td><td>28.7</td><td>34.8</td><td>60.8 &plusmn; 7.3</td></tr>
+                  <tr class="is-best"><td><strong>FusionAgent (CoT)</strong></td><td><strong>54.7</strong></td><td><strong>28.7</strong></td><td><strong>34.9</strong></td><td><strong>58.6 &plusmn; 7.4</strong></td></tr>
                 </tbody>
               </table>
             </div>
@@ -350,11 +394,21 @@
       </div>
     </div>
 
+    <div class="columns is-centered" style="margin-top: 1.2rem;">
+      <div class="column is-four-fifths">
+        <div class="content has-text-justified">
+          <p>
+            The ablation study in the paper shows that the performance gain does not come from using more models indiscriminately. Compared with hard selection that fuses all models, agent-based dynamic selection consistently performs better across Rank-1, mAP, and TAR, while substantially reducing FNIR. Additional experiments also show that ACT remains effective when paired with the agent-selected model subsets, outperforming alternative fusion rules such as Z-score and Farsight on LTCC.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Top-k Ablation -->
     <div class="columns is-centered" style="margin-top: 2rem;">
       <div class="column is-four-fifths has-text-centered">
         <h3 class="title is-5">Effect of Top-k Value in ACT</h3>
-        <figure class="image" style="margin-bottom: 0.5rem;">
+        <figure class="image figure-scaled-80" style="margin-bottom: 0.5rem;">
           <img src="./static/images/figures/ablation_topk_ltcc.png" alt="Top-k ablation on LTCC" style="border-radius: 8px;">
         </figure>
         <p class="fig-caption" style="font-size: 0.9rem;">
